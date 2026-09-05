@@ -1,4 +1,15 @@
 # 🖐️ Hand Frame FX — Windows XP Edition
+
+<p align="center">
+  <strong>Real-time hand tracking that turns your webcam into a special-effects camera</strong>
+</p>
+
+<p align="center">
+  <a href="https://amiralifirouzi.github.io/Hand-Frame-Fx/">🚀 Live</a>
+
+
+---  
+
 A creative computer vision web application that uses your webcam to track hand movements, allowing you to frame scenes and apply real-time visual effects. The entire user interface is a highly accurate, nostalgic recreation of Windows XP, complete with MS Paint, the Start menu, and the classic taskbar.
 
 # 📝 What It Does
@@ -27,7 +38,7 @@ To switch between effects, simply pinch your thumb and index finger together on 
 
 **Amirali Firouzi**
 
-Computer Vision • Machine Learning • R Shiny
+Computer Vision • Mediapipe 
 
 - GitHub: `@AmiraliFirouzi`
 - LinkedIn: `www.linkedin.com/in/amirali-firouzi-2b714335a`
