@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Hand Frame FX — XP Edition</title>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous" integrity="sha384-<HASH>"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+<style>
+/* ===== Base ===== */
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{font-family:Tahoma,'Segoe UI','DejaVu Sans',sans-serif;font-size:11px;background:#3a6ea5}
+button{cursor:default;font-family:inherit}
+a{cursor:pointer}
+
+/* ===== Bliss desktop ===== */
+#bliss{position:fixed;inset:0;z-index:0;background:#7fb3e8}
+#bliss::after{content:'';position:absolute;inset:0;box-shadow:inset 0 0 200px rgba(0,20,60,.28);pointer-events:none}
+.cloud{position:absolute;left:0;pointer-events:none;will-change:transform;animation:drift linear infinite}
+.cloud svg{display:block;width:100%;filter:blur(3px)}
+.c1{top:4%;width:360px;opacity:.95;animation-duration:160s;animation-delay:-40s}
+.c2{top:14%;width:250px;opacity:.8;animation-duration:220s;animation-delay:-130s}
+.c3{top:25%;width:180px;opacity:.62;animation-duration:280s;animation-delay:-70s}
+@keyframes drift{from{transform:translateX(-420px)}to{transform:translateX(110vw)}}
+@media (prefers-reduced-motion:reduce){.cloud{animation:none}}
+
+#desktop{position:fixed;inset:0 0 32px 0;z-index:1;overflow:hidden}
+
+/* ===== Desktop icons ===== */
+.dicon{position:absolute;width:86px;text-align:center;user-select:none}
+.dicon .ic{position:relative;width:40px;margin:0 auto}
+.dicon .ic svg{display:block}
+.dicon .lb{margin-top:5px;color:#fff;font:11px Tahoma;padding:1px 3px;text-shadow:1px 1px 2px rgba(0,25,90,.95);display:inline-block}
+.dicon.sel .lb{background:#316ac5;text-shadow:none}
+.dicon.sel .ic::after{content:'';position:absolute;inset:-2px;background:rgba(49,106,197,.45)}
+
+/* ===== XP window (MS Paint) ===== */
+.xp-win{background:#ECE9D8;border:3px solid #0d51d3;border-radius:8px 8px 5px 5px;
+  box-shadow:0 12px 34px rgba(3,12,50,.42);user-select:none}
+#paint{position:absolute;display:flex;flex-direction:column;animation:winin .28s ease-out;
+  transition:opacity .18s ease,transform .18s ease}
+@keyframes winin{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
+#paint.mini{opacity:0;transform:translateY(46px) scale(.9)}
+
+/* Title bar */
+.tbar{height:29px;display:flex;align-items:center;gap:6px;padding:0 4px 0 8px;touch-action:none;
+  background:linear-gradient(180deg,#3f8ff8 0%,#1450dc 45%,#0a63f0 88%,#0639b8 100%)}
+.tbar .tIcon{display:grid;place-items:center;width:18px;height:18px}
+.tbar .tt{flex:1;color:#fff;font:bold 13px 'Trebuchet MS',Tahoma;text-shadow:1px 1px 1px #10247e;
+  white-space:nowrap;overflow:hidden;margin-left:2px}
+.tbtn{width:21px;height:21px;border-radius:3px;display:grid;place-items:center;flex:none;
+  border:1px solid rgba(255,255,255,.4);box-shadow:inset 0 1px 0 rgba(255,255,255,.35);
+  background:linear-gradient(180deg,#4a90f2 0%,#2a6de6 45%,#1251c8 100%)}
+.tbtn:hover{filter:brightness(1.16)}
+.tbtn:active{filter:brightness(.82);box-shadow:inset 0 1px 3px rgba(0,0,0,.4)}
+.tbtn.close{background:linear-gradient(180deg,#f49a82 0%,#e0573a 40%,#c72f13 100%)}
+
+/* Menu bar */
+#mbar{display:flex;padding:2px 6px 3px;background:#ECE9D8}
+.mb{padding:3px 8px;color:#222}
+.mb:hover{background:#cfe0fb}
+.mb.open{background:#316ac5;color:#fff!important}
+
+/* Body: toolbox + workspace */
+.pbody{flex:1;display:flex;min-height:0}
+.panel{border:1px solid;border-color:#fff #8f8a78 #8f8a78 #fff}
+.tbox{width:68px;padding:3px;flex:none}
+.tools{display:grid;grid-template-columns:repeat(2,1fr)}
+.tool{height:27px;display:grid;place-items:center;border:1px solid transparent}
+.tool svg{display:block}
+.tool:hover{border-color:#fff #7f9db9 #7f9db9 #fff}
+.tool.on{border-color:#7f9db9 #fff #fff #7f9db9;background:#dcd7c3;box-shadow:inset 1px 1px 3px rgba(0,0,0,.14)}
+.tinfo{margin-top:5px;padding:5px 4px;height:64px;overflow:hidden;font:10px Tahoma;color:#4a4636;line-height:1.45;
+  border:1px solid;border-color:#7f9db9 #fff #fff #7f9db9}
+.tinfo b{color:#1a3f7a}
+
+.work{flex:1;position:relative;overflow:hidden;background:#ECE9D8;min-width:0}
+#holder{position:absolute;left:8px;top:8px;border:1px solid #7f9db9;background:#000;
+  box-shadow:3px 4px 12px rgba(0,0,0,.3);touch-action:none}
+#output_canvas{display:block;width:100%;height:100%}
+.hnd{position:absolute;width:8px;height:8px;background:#245edb;border:1px solid #9cc3f7}
+.hnd.r{right:-4px;top:calc(50% - 4px)}
+.hnd.b{bottom:-4px;left:calc(50% - 4px)}
+.hnd.br{right:-4px;bottom:-4px}
+
+/* Color palette */
+.pal{position:absolute;right:6px;bottom:6px;display:flex;align-items:center;gap:5px;padding:3px 4px}
+.fgbg{position:relative;width:26px;height:26px;margin-right:2px;flex:none}
+.fgbg .b{position:absolute;right:0;bottom:0;width:16px;height:16px;background:#fff;border:1px solid #808080}
+.fgbg .f{position:absolute;left:0;top:0;width:16px;height:16px;border:1px solid #808080;z-index:1}
+.sw{display:grid;grid-template-columns:repeat(14,15px);grid-auto-rows:13px}
+.swb{box-shadow:inset 0 0 0 1px rgba(128,128,128,.75)}
+.swb.sel{box-shadow:inset 0 0 0 1px #808080,0 0 0 2px #fff,0 0 0 3px #2a2a2a;position:relative;z-index:1}
+
+/* Status bar */
+.sbar{height:24px;display:flex;align-items:stretch;gap:2px;padding:2px 4px;background:#ECE9D8}
+.scell{display:flex;align-items:center;padding:0 8px;color:#333;white-space:nowrap;overflow:hidden;
+  border:1px solid;border-color:#9d9887 #fff #fff #9d9887}
+.scell.grow{flex:1}
+.grip{width:16px;border:1px solid;border-color:#9d9887 #fff #fff #9d9887;
+  background:repeating-linear-gradient(135deg,transparent 0 2px,#c2bdab 2px 4px)}
+
+/* ===== Popup menus ===== */
+.menu-pop{position:fixed;min-width:190px;background:#fff;border:1px solid #aca899;
+  box-shadow:3px 4px 12px rgba(0,0,0,.28);padding:2px;z-index:85;user-select:none}
+.menu-pop::before{content:'';position:absolute;left:0;top:0;bottom:0;width:24px;
+  background:linear-gradient(180deg,#f5f3e8,#e7e5d7);border-right:1px solid #e0ddce;pointer-events:none}
+.mi{position:relative;display:flex;align-items:center;height:23px;padding:0 16px 0 34px;color:#222;white-space:nowrap}
+.mi:hover{background:#316ac5;color:#fff}
+.mi .ck{position:absolute;left:10px;width:7px;height:4px;border-left:2px solid #333;border-bottom:2px solid #333;transform:rotate(-45deg)}
+.mi:hover .ck{border-color:#fff}
+.msep{height:1px;background:#dad7ca;margin:3px 2px 3px 26px}
+
+/* ===== Taskbar ===== */
+#taskbar{position:fixed;left:0;right:0;bottom:0;height:32px;z-index:50;display:flex;align-items:stretch;
+  background:linear-gradient(180deg,#5b9bf5 0%,#2b64d8 7%,#2458c6 12%,#1d4bb0 45%,#173f9e 90%,#123386 100%);
+  border-top:1px solid #7aa8f5;user-select:none}
+#startBtn{display:flex;align-items:center;gap:7px;padding:0 20px 0 10px;margin:0 10px 0 0;color:#fff;
+  font:italic bold 16px 'Trebuchet MS',Tahoma;text-shadow:1px 1px 2px #053;letter-spacing:.5px;
+  background:linear-gradient(180deg,#7cc16a 0%,#4ba13a 10%,#2e7d1e 60%,#256a14 100%);
+  border-radius:0 14px 14px 0;box-shadow:inset 0 1px 0 rgba(255,255,255,.45)}
+#startBtn:hover{filter:brightness(1.12)}
+#startBtn.down{filter:brightness(.8);box-shadow:inset 1px 2px 4px rgba(0,40,0,.5)}
+.tkb{align-self:center;height:26px;display:flex;align-items:center;gap:7px;padding:0 10px;min-width:170px;
+  color:#fff;font:11px Tahoma;border-radius:3px;
+  background:linear-gradient(180deg,#3d77e8,#2757c0);box-shadow:inset 1px 1px 0 rgba(255,255,255,.28)}
+.tkb.on{background:linear-gradient(180deg,#173f9e,#1c46a8);box-shadow:inset 1px 1px 4px rgba(0,0,0,.5)}
+.tkb:hover{filter:brightness(1.1)}
+#tray{margin-left:auto;display:flex;align-items:center;gap:10px;padding:0 12px;
+  background:linear-gradient(180deg,#1a90e8 0%,#0b6cc4 55%,#0a5ab0 100%);border-left:1px solid #6ba7f9}
+#tray svg{display:block}
+#clk{color:#fff;font:11px Tahoma;text-shadow:1px 1px 1px #06256e}
+
+/* ===== Start menu ===== */
+#startMenu{position:fixed;left:2px;bottom:34px;width:332px;background:#fff;border:1px solid #1c50c8;
+  border-radius:0 8px 0 0;box-shadow:0 -4px 26px rgba(0,10,40,.35);z-index:70;display:none;overflow:hidden;user-select:none}
+#startMenu.open{display:flex;flex-direction:column;animation:smpop .15s ease-out}
+@keyframes smpop{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+#startMenu::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;z-index:2;
+  background:linear-gradient(180deg,#f6a33c,#f2b85c 40%,#dd9330 70%,#e58b2c)}
+.smHead{height:62px;display:flex;align-items:center;gap:12px;padding:0 16px;
+  background:linear-gradient(180deg,#3f8ff8 0%,#1a63e0 45%,#1857cc 100%);border-bottom:1px solid #0e3f9e}
+.smHead .av{border:2px solid #cfe0fb;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.smHead .nm{color:#fff;font:bold 15px 'Trebuchet MS',Tahoma;text-shadow:1px 1px 2px #0a2c80}
+.smBody{display:flex;min-height:226px}
+.smL{width:152px;background:#fff;padding:4px 0;border-right:1px solid #c3d3ee}
+.smR{flex:1;background:linear-gradient(180deg,#d3e5fa,#c7dcf7);padding:4px 0}
+.smHdr{font:bold 11px Tahoma;color:#1a3f9e;padding:6px 14px 5px}
+.smItem{display:flex;align-items:center;gap:9px;height:32px;padding:0 14px;color:#222;white-space:nowrap}
+.smItem svg{flex:none;display:block}
+.smItem:hover{background:#316ac5;color:#fff}
+.smItem.cur{font-weight:bold}
+.smItem.cur::after{content:'';margin-left:auto;width:6px;height:6px;border-radius:50%;background:#e58b2c;flex:none}
+.smSep{height:1px;background:#d8e2f2;margin:5px 14px}
+.smFoot{height:40px;display:flex;align-items:center;justify-content:flex-end;gap:6px;padding:0 16px;
+  background:linear-gradient(180deg,#2f7cf0 0%,#1a5ed0 100%);border-top:1px solid #0e3f9e}
+/* Start-menu footer buttons: transparent at rest, Luna highlight on hover */
+.smFbtn{display:flex;align-items:center;gap:7px;padding:5px 12px;border-radius:3px;color:#fff;
+  font:11px Tahoma;background:none;border:1px solid transparent;text-shadow:0 1px 2px rgba(0,10,40,.5)}
+.smFbtn svg{flex:none;display:block}
+.smFbtn:hover{background:rgba(155,194,255,.35);border-color:rgba(255,255,255,.45)}
+.smFbtn:active{background:rgba(155,194,255,.55)}
+
+/* ===== XP dialogs ===== */
+.dlg{position:fixed;width:310px;background:#ECE9D8;border:3px solid #0d51d3;border-radius:8px 8px 5px 5px;
+  box-shadow:0 14px 40px rgba(2,10,40,.48);overflow:hidden;user-select:none}
+.dBar{height:24px;display:flex;align-items:center;padding:0 4px 0 9px;touch-action:none;
+  background:linear-gradient(180deg,#3f8ff8 0%,#1450dc 45%,#0a63f0 90%,#0639b8 100%)}
+.dBar .dT{flex:1;color:#fff;font:bold 12px 'Trebuchet MS',Tahoma;white-space:nowrap}
+.dX{width:19px;height:19px}
+.dBody{padding:14px 14px 12px;display:flex;gap:12px;align-items:flex-start;color:#222;line-height:1.55}
+.dBody .icn{flex:none}
+.dBtns{display:flex;justify-content:flex-end;gap:8px;padding:0 14px 14px}
+.xbtn{min-width:74px;height:23px;padding:0 12px;font:11px Tahoma;color:#1a1a1a;border-radius:3px;
+  border:1px solid #003c74;box-shadow:inset 0 0 0 1px #fff;
+  background:linear-gradient(180deg,#fff 0%,#f2f0e4 46%,#e4e1d2 88%,#d8d4c2 100%)}
+.xbtn:hover{box-shadow:inset 0 0 0 1px #fff,inset 0 0 6px rgba(255,150,30,.6)}
+.xbtn:active{background:linear-gradient(180deg,#e6e3d4,#f2f0e6);box-shadow:inset 1px 1px 3px rgba(0,0,0,.25)}
+.aRow{display:flex;align-items:center;gap:8px;margin:6px 0}
+.aRow label{width:52px;text-align:right}
+.aRow input{width:76px;border:1px solid #7f9db9;padding:2px 4px;font:11px Tahoma}
+.aNote{margin-top:10px;color:#666}
+.ldg{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px}
+.xpbar{height:20px;width:100%;border:1px solid #7f9db9;background:#fff;overflow:hidden;box-shadow:inset 1px 1px 2px rgba(0,0,0,.12)}
+.xpfill{height:100%;width:130%;
+  background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,0) 45%,rgba(0,60,0,.14)),
+  repeating-linear-gradient(90deg,#3ecf4e 0 10px,#eaf6ea 10px 14px);
+  animation:xpmove .45s linear infinite}
+@keyframes xpmove{from{transform:translateX(0)}to{transform:translateX(14px)}}
+
+/* Links inside dialogs (author credits) */
+.dLink{color:#1a3f9e;text-decoration:none;border-bottom:1px dotted #6b86c4}
+.dLink:hover{color:#b3271e;border-bottom-color:#b3271e;background:#fff}
+
+/* "Turn off computer" dialog (classic XP) */
+.sdDlg{width:330px}
+.sdBody{display:flex;justify-content:center;gap:22px;padding:20px 14px 16px;
+  background:linear-gradient(180deg,#3a72e0 0%,#1c4fbe 55%,#143a9e 100%)}
+.sdBtn{display:flex;flex-direction:column;align-items:center;gap:8px;padding:6px;border-radius:5px;
+  background:none;border:1px solid transparent}
+.sdBtn svg{display:block}
+.sdBtn span{color:#fff;font:11px Tahoma;text-shadow:0 1px 2px rgba(0,10,40,.5)}
+.sdBtn:hover{background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.4)}
+.sdBtn:hover svg{filter:brightness(1.2)}
+.sdBtn:active{background:rgba(255,255,255,.07)}
+.sdFoot{display:flex;justify-content:flex-end;padding:9px 16px;
+  background:linear-gradient(180deg,#1a46b4 0%,#0e2f8a 100%)}
+.sdCancel{background:none;border:none;color:#fff;font:11px Tahoma;padding:4px 10px;border-radius:3px}
+.sdCancel:hover{background:rgba(255,255,255,.18);text-decoration:underline}
+
+/* ===== Full-screen power states (shut down / stand by / boot) ===== */
+#shutdown{position:fixed;inset:0;background:#000;z-index:999;display:none;
+  flex-direction:column;align-items:center;justify-content:center;gap:10px;
+  animation:sdFade .7s ease-out both}
+#shutdown.show{display:flex}
+@keyframes sdFade{from{opacity:0}to{opacity:1}}
+#shutdown .safe{color:#f7a930;font:bold 26px 'Trebuchet MS',Tahoma;text-align:center;
+  line-height:1.55;letter-spacing:.5px;text-shadow:0 0 18px rgba(247,169,48,.4)}
+#shutdown .hint{color:#3f3f3f;font:11px Tahoma;margin-top:26px}
+#shutdown .sbTxt{color:#4a4a4a;font:12px Tahoma}
+#shutdown .boot{display:flex;flex-direction:column;align-items:center;gap:9px}
+#shutdown .bt{color:#fff;font:bold 22px 'Trebuchet MS',Tahoma;margin-top:6px}
+#shutdown .bs{color:#8ab8ee;font:12px Tahoma}
+#shutdown .bootbar{width:220px;margin-top:12px}
+
+/* ===== Balloon & tooltip ===== */
+#balloon{position:fixed;right:12px;bottom:44px;width:286px;background:#ffffe1;border:1px solid #767676;
+  border-radius:7px;padding:9px 11px;color:#222;z-index:95;display:none;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+#balloon::after{content:'';position:absolute;right:24px;bottom:-8px;border:8px solid transparent;border-top-color:#ffffe1;border-right:0}
+#balloon.pop{animation:bpop .18s ease-out}
+@keyframes bpop{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:none}}
+.bHead{display:flex;align-items:center;gap:7px;margin-bottom:4px}
+.bHead b{flex:1}
+.bHead svg{display:block}
+.bX{border:none;background:none;padding:1px;display:grid;place-items:center}
+.bTxt{line-height:1.5}
+#tip{position:fixed;display:none;z-index:99;background:#ffffe1;border:1px solid #000;padding:2px 6px;
+  font:11px Tahoma;color:#222;pointer-events:none;white-space:nowrap}
+#cin{position:fixed;left:-100px;top:-100px;width:0;height:0;opacity:0}
+</style>
+</head>
+<body>
+
+<!-- Bliss wallpaper -->
+<div id="bliss" aria-hidden="true">
+  <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" style="position:absolute;inset:0;width:100%;height:100%">
+    <defs>
+      <linearGradient id="gSky" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#1f6cd8"/><stop offset=".38" stop-color="#5aa0e6"/>
+        <stop offset=".62" stop-color="#a9d3ef"/><stop offset=".66" stop-color="#cfe8f8"/>
+      </linearGradient>
+      <linearGradient id="gHillB" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#a8cd7c"/><stop offset="1" stop-color="#77ab4e"/>
+      </linearGradient>
+      <linearGradient id="gHill" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#8ecb52"/><stop offset=".5" stop-color="#5da533"/><stop offset="1" stop-color="#2f7a1e"/>
+      </linearGradient>
+    </defs>
+    <rect width="1600" height="900" fill="url(#gSky)"/>
+    <path d="M0 560 Q 300 520 620 545 T 1600 540 L1600 900 0 900 Z" fill="url(#gHillB)" opacity=".55"/>
+    <rect x="0" y="512" width="1600" height="80" fill="#eaf4fb" opacity=".35"/>
+    <path d="M0 900 L0 610 Q 260 470 560 505 Q 900 545 1160 585 Q 1380 615 1600 600 L1600 900 Z" fill="url(#gHill)"/>
+    <path d="M0 610 Q 260 470 560 505 Q 700 525 830 548" stroke="#c8ea8e" stroke-width="24" fill="none" opacity=".35" stroke-linecap="round"/>
+    <path d="M170 690 Q 420 570 780 608" stroke="#57a332" stroke-width="44" fill="none" opacity=".22" stroke-linecap="round"/>
+    <path d="M900 660 Q 1150 590 1450 632" stroke="#7cbb4a" stroke-width="30" fill="none" opacity=".25" stroke-linecap="round"/>
+  </svg>
+  <div class="cloud c1"><svg viewBox="0 0 300 100"><ellipse cx="90" cy="62" rx="70" ry="24" fill="#fff"/><ellipse cx="150" cy="46" rx="55" ry="28" fill="#fff"/><ellipse cx="205" cy="63" rx="60" ry="20" fill="#fff"/><ellipse cx="150" cy="68" rx="110" ry="18" fill="#fff"/></svg></div>
+  <div class="cloud c2"><svg viewBox="0 0 300 100"><ellipse cx="100" cy="60" rx="80" ry="26" fill="#fff"/><ellipse cx="170" cy="48" rx="60" ry="30" fill="#fff"/><ellipse cx="230" cy="62" rx="55" ry="20" fill="#fff"/></svg></div>
+  <div class="cloud c3"><svg viewBox="0 0 300 100"><ellipse cx="120" cy="58" rx="85" ry="24" fill="#fff"/><ellipse cx="195" cy="50" rx="55" ry="26" fill="#fff"/></svg></div>
+</div>
+
+<div id="desktop">
+  <!-- Desktop icons -->
+  <div class="dicon" id="icApp" style="left:14px;top:10px">
+    <div class="ic"><svg width="38" height="38" viewBox="0 0 38 38"><rect x="2" y="5" width="34" height="27" rx="2.5" fill="#eef0f6" stroke="#76768e"/><rect x="5" y="8" width="28" height="21" fill="#7fb5e8"/><path d="M5 22 q7-7 12-2.5 t9-1.5 v8 h-28z" fill="#69ad3e"/><path d="M5 26 q5-4 10-1 t8-1 v4 h-28z" fill="#579733"/><circle cx="25" cy="13" r="3.2" fill="#fff6d8"/></svg></div>
+    <div class="lb">Hand Frame FX</div>
+  </div>
+  <div class="dicon" id="icBin" style="left:14px;top:108px">
+    <div class="ic"><svg width="38" height="38" viewBox="0 0 38 38"><path d="M9 11h20l-2.2 22H11.2z" fill="#b9c4d6" stroke="#5a6a86"/><path d="M6.5 7.5h25V11h-25z" fill="#8b98b0" stroke="#5a6a86"/><path d="M14 4.5h10V7h-10z" fill="#8b98b0" stroke="#5a6a86"/><path d="M14.5 15v14M19 15v14M23.5 15v14" stroke="#5a6a86" opacity=".65"/></svg></div>
+    <div class="lb">Recycle Bin</div>
+  </div>
+
+  <!-- MS Paint window -->
+  <div id="paint" class="xp-win">
+    <div class="tbar" id="tbar">
+      <span class="tIcon"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M2 5V2h3M11 2h3v3M14 11v3h-3M5 14H2v-3" fill="none" stroke="#9cc3f7" stroke-width="1.6"/><rect x="6" y="6" width="4" height="4" fill="#ffd94a"/></svg></span>
+      <span class="tt">untitled - Hand Frame FX</span>
+      <button class="tbtn" id="btnMin" title=""><svg width="21" height="21" viewBox="0 0 21 21"><rect x="6" y="13" width="8" height="2.4" fill="#fff"/></svg></button>
+      <button class="tbtn" id="btnMax"><svg width="21" height="21" viewBox="0 0 21 21"><path d="M6 7.5h9v7H6z" fill="none" stroke="#fff" stroke-width="1.5"/><rect x="6" y="6" width="9" height="2" fill="#fff"/></svg></button>
+      <button class="tbtn close" id="btnClose"><svg width="21" height="21" viewBox="0 0 21 21"><path d="M6 6l9 9M15 6l-9 9" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></svg></button>
+    </div>
+    <div id="mbar"></div>
+    <div class="pbody">
+      <div class="tbox panel">
+        <div class="tools" id="tools"></div>
+        <div class="tinfo" id="tinfo"></div>
+      </div>
+      <div class="work" id="work">
+        <div id="holder">
+          <video id="input_video" playsinline style="display:none"></video>
+          <canvas id="output_canvas" width="640" height="480"></canvas>
+          <div class="hnd r"></div><div class="hnd b"></div><div class="hnd br"></div>
+        </div>
+        <div class="pal panel">
+          <div class="fgbg"><div class="b"></div><div class="f" id="fgSw"></div></div>
+          <div class="sw" id="sw"></div>
+        </div>
+      </div>
+    </div>
+    <div class="sbar">
+      <div class="scell grow" id="sbFx"></div>
+      <div class="scell" id="sbHands">no hands</div>
+      <div class="scell" id="sbFps">FPS --</div>
+      <div class="scell" id="sbXY"></div>
+      <div class="scell" id="sbRes"></div>
+      <div class="grip"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Taskbar -->
+<div id="taskbar">
+  <button id="startBtn">
+    <svg width="18" height="18" viewBox="0 0 18 18"><g transform="rotate(-12 9 9)"><rect x="2" y="2" width="6.4" height="6.4" rx="1" fill="#e8492f"/><rect x="9.6" y="2" width="6.4" height="6.4" rx="1" fill="#7db832"/><rect x="2" y="9.6" width="6.4" height="6.4" rx="1" fill="#2f8fe8"/><rect x="9.6" y="9.6" width="6.4" height="6.4" rx="1" fill="#f7c33c"/></g></svg>
+    <span>start</span>
+  </button>
+  <button class="tkb on" id="taskBtn">
+    <svg width="16" height="16" viewBox="0 0 16 16"><path d="M2 5V2h3M11 2h3v3M14 11v3h-3M5 14H2v-3" fill="none" stroke="#fff" stroke-width="1.6"/><rect x="6" y="6" width="4" height="4" fill="#ffd94a"/></svg>
+    <span>Hand Frame FX</span>
+  </button>
+  <div id="tray"><span id="trayCam"></span><span id="clk"></span></div>
+</div>
+
+<!-- Start menu -->
+<div id="startMenu">
+  <div class="smHead">
+    <span class="av"><svg width="40" height="40" viewBox="0 0 40 40"><rect x="1.5" y="1.5" width="37" height="37" rx="4" fill="#4a90e8" stroke="#cfe0fb" stroke-width="3"/><circle cx="20" cy="15" r="7" fill="#fff"/><path d="M7 37c1-9 6-13 13-13s12 4 13 13z" fill="#fff"/></svg></span>
+    <span class="nm">Guest</span>
+  </div>
+  <div class="smBody">
+    <div class="smL" id="smL"></div>
+    <div class="smR">
+      <div class="smHdr">Effects</div>
+      <div id="smFx"></div>
+    </div>
+  </div>
+  <div class="smFoot">
+    <button class="smFbtn" id="smLogOff"><svg width="16" height="16" viewBox="0 0 16 16"><circle cx="5" cy="8" r="3.2" fill="none" stroke="#fff" stroke-width="1.8"/><path d="M8.2 8h6M11.5 8v2.6M13.8 8v2" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>Log Off</button>
+    <button class="smFbtn" id="smOff"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 2v5" stroke="#fff" stroke-width="2" stroke-linecap="round"/><path d="M4.2 4.2a6 6 0 1 0 7.6 0" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>Turn Off Computer</button>
+  </div>
+</div>
+
+<!-- Full-screen power states -->
+<div id="shutdown"></div>
+
+<div id="tip"></div>
+<div id="balloon"></div>
+<input type="color" id="cin" value="#00ffff">
+
+<script>
+/* ============================================================
+   Hand Frame FX — Windows XP Edition
+   Created by AmiraliFirouzi
+   github.com/AmiraliFirouzi
+   ============================================================ */
+const $=s=>document.querySelector(s);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const escapeHtml=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+const video=$('#input_video'), canvas=$('#output_canvas'), ctx=canvas.getContext('2d');
+const W=640, H=480, PINCH_CD=250;
+
+/* Intermediate canvases */
+const baseC=document.createElement('canvas'); baseC.width=W; baseC.height=H; const bctx=baseC.getContext('2d');       // mirrored raw frame
+const fxC=document.createElement('canvas');   fxC.width=W;   fxC.height=H;   const fx=fxC.getContext('2d');             // effect buffer
+const trC=document.createElement('canvas');   trC.width=W;   trC.height=H;   const trctx=trC.getContext('2d');          // trail buffer
+const thC=document.createElement('canvas');   thC.width=160; thC.height=120; const tctx=thC.getContext('2d',{willReadFrequently:true}); // thermal
+
+/* ---------- Icons (small MS-Paint-style SVGs) ---------- */
+const ICON={
+ cyber:'<svg width="16" height="16" viewBox="0 0 16 16"><rect x="2" y="3" width="2.5" height="10" fill="#111"/><rect x="7" y="5" width="2.5" height="8" fill="#111"/><rect x="12" y="2" width="2.5" height="9" fill="#111"/><rect x="2" y="3" width="2.5" height="3.2" fill="#0cf"/><rect x="7" y="5" width="2.5" height="2" fill="#0cf"/><rect x="12" y="2" width="2.5" height="2.6" fill="#f4c"/><path d="M1 14.5h14" stroke="#111"/></svg>',
+ therm:'<svg width="16" height="16" viewBox="0 0 16 16"><rect x="6.8" y="1.5" width="3.4" height="9" rx="1.2" fill="#f4f4f4" stroke="#333"/><circle cx="8.5" cy="11.6" r="3.1" fill="#f4f4f4" stroke="#333"/><rect x="7.8" y="5" width="1.4" height="6.5" fill="#e33"/><circle cx="8.5" cy="11.6" r="2" fill="#e33"/></svg>',
+ haze:'<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke-width="1.5"><path d="M1 4.5q3-3 6 0t7 0" stroke="#333"/><path d="M1 8.5q3-3 6 0t7 0" stroke="#e2711d"/><path d="M1 12.5q3-3 6 0t7 0" stroke="#333"/></svg>',
+ chroma:'<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="4.5" width="8" height="8" stroke="#d33" stroke-width="1.6"/><rect x="5.5" y="2.5" width="8" height="8" stroke="#09c" stroke-width="1.6"/></svg>',
+ echo:'<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#333"><rect x="2" y="2" width="12" height="12" stroke-opacity=".25"/><rect x="4.5" y="4.5" width="7" height="7" stroke-opacity=".55"/><rect x="6.7" y="6.7" width="2.8" height="2.8" fill="#333" stroke="none"/></svg>',
+ pixel:'<svg width="16" height="16" viewBox="0 0 16 16"><rect x="2" y="2" width="4" height="4" fill="#333"/><rect x="10" y="2" width="4" height="4" fill="#b7b7b7"/><rect x="6" y="6" width="4" height="4" fill="#777"/><rect x="2" y="10" width="4" height="4" fill="#b7b7b7"/><rect x="10" y="10" width="4" height="4" fill="#333"/></svg>',
+ neon:'<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="4.4" stroke="#f5a623" stroke-width="1.7"/><path d="M8 1v2.6M8 12.4V15M1 8h2.6M12.4 8H15" stroke="#333" stroke-width="1.5"/></svg>',
+ next:'<svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 3l6 5-6 5z" fill="#333"/><rect x="11" y="3" width="2.5" height="10" fill="#333"/></svg>',
+ dice:'<svg width="16" height="16" viewBox="0 0 16 16"><rect x="1.5" y="1.5" width="13" height="13" rx="2.5" fill="#fff" stroke="#345"/><circle cx="5.2" cy="5.2" r="1.3" fill="#345"/><circle cx="10.8" cy="5.2" r="1.3" fill="#345"/><circle cx="8" cy="8" r="1.3" fill="#c33"/><circle cx="5.2" cy="10.8" r="1.3" fill="#345"/><circle cx="10.8" cy="10.8" r="1.3" fill="#345"/></svg>',
+ help:'<svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="#2a6ec9" stroke="#123f8a"/><text x="8" y="12" font-family="Tahoma" font-size="10" font-weight="bold" fill="#fff" text-anchor="middle">?</text></svg>',
+ app16:'<svg width="16" height="16" viewBox="0 0 16 16"><path d="M2 5V2h3M11 2h3v3M14 11v3h-3M5 14H2v-3" fill="none" stroke="#2a6ec9" stroke-width="1.7"/><rect x="6" y="6" width="4" height="4" fill="#e8a020"/></svg>',
+ app32:'<svg width="32" height="32" viewBox="0 0 16 16"><path d="M2 5V2h3M11 2h3v3M14 11v3h-3M5 14H2v-3" fill="none" stroke="#2a6ec9" stroke-width="1.5"/><rect x="5.5" y="5.5" width="5" height="5" fill="#e8a020"/><path d="M8 2.2v1.6M13.8 8h-1.6M8 13.8v-1.6M2.2 8h1.6" stroke="#c33" stroke-width="1.2"/></svg>',
+ x:'<svg width="12" height="12" viewBox="0 0 12 12"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7" stroke="#666" stroke-width="1.8" stroke-linecap="round"/></svg>',
+ author:'<svg width="32" height="32" viewBox="0 0 16 16"><rect x="1" y="1" width="14" height="14" rx="2.5" fill="#3f8ff8" stroke="#1a3f9e"/><circle cx="8" cy="6.2" r="2.7" fill="#fff"/><path d="M3 14.4c.6-3.5 2.5-5 5-5s4.4 1.5 5 5z" fill="#fff"/></svg>',
+ /* "Turn off computer" dialog icons */
+ standby:'<svg width="34" height="34" viewBox="0 0 34 34"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="#f7d54a" stroke="#c9992a" stroke-width="1.3" transform="translate(5.5 5.5)"/></svg>',
+ poweroff:'<svg width="34" height="34" viewBox="0 0 34 34"><defs><linearGradient id="gPwr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff8a5e"/><stop offset=".6" stop-color="#e8502f"/><stop offset="1" stop-color="#c2361a"/></linearGradient></defs><g transform="translate(5 5)" fill="none" stroke="url(#gPwr)" stroke-width="3.4" stroke-linecap="round"><path d="M18.36 6.64a10 10 0 1 1-12.73 0"/><path d="M12 2v9"/></g></svg>',
+ restart:'<svg width="34" height="34" viewBox="0 0 34 34"><defs><linearGradient id="gRes" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8ed06e"/><stop offset=".6" stop-color="#4ba13a"/><stop offset="1" stop-color="#2e7d1e"/></linearGradient></defs><g transform="translate(5 5)" fill="none" stroke="url(#gRes)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></g></svg>'
+};
+const icon32=t=>{
+  if(t==='info')   return '<svg width="32" height="32" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="#2a6ec9" stroke="#123f8a"/><rect x="7" y="6.5" width="2" height="6" fill="#fff"/><circle cx="8" cy="4.4" r="1.2" fill="#fff"/></svg>';
+  if(t==='error') return '<svg width="32" height="32" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="#d13a2a" stroke="#7e1a0e"/><path d="M5 5l6 6M11 5l-6 6" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>';
+  return '<svg width="32" height="32" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="#2a6ec9" stroke="#123f8a"/><text x="8" y="12" font-family="Tahoma" font-size="10" font-weight="bold" fill="#fff" text-anchor="middle">?</text></svg>';
+};
+const camSVG=on=>'<svg width="16" height="16" viewBox="0 0 16 16"><rect x="1" y="4" width="9" height="8" rx="1.5" fill="#fff"/><path d="M10.5 7l4-2.5v7L10.5 9z" fill="#fff"/><circle cx="5.5" cy="8" r="2.3" fill="'+(on?'#3d3':'#d33')+'"/></svg>';
+
+/* ---------- IR palette for the thermal effect (Ironbow) ---------- */
+const IR_LUT=(()=>{
+  const stops=[[0,[8,2,26]],[45,[70,12,95]],[95,[150,25,70]],[145,[225,70,25]],[190,[255,160,40]],[225,[255,235,120]],[255,[255,255,255]]];
+  const lut=new Uint8Array(768);
+  for(let v=0;v<256;v++){
+    let i=0; while(i<stops.length-2 && stops[i+1][0]<v) i++;
+    const [p0,c0]=stops[i],[p1,c1]=stops[i+1]||stops[i];
+    const t=p1===p0?0:clamp((v-p0)/(p1-p0),0,1);
+    lut[v*3]  =c0[0]+(c1[0]-c0[0])*t;
+    lut[v*3+1]=c0[1]+(c1[1]-c0[1])*t;
+    lut[v*3+2]=c0[2]+(c1[2]-c0[2])*t;
+  }
+  return lut;
+})();
+
+/* ---------- Global state ---------- */
+let currentEffect=0, frameColor='#00ffff', showSkeletons=true, mirror=true;
+let frameCount=0, flash=0, isPinched=false, lastPinchTime=0;
+let prevHands=[null,null], handsState=-1;
+let camActive=false, camStarting=false, sending=false, seenResult=false, stream=null;
+let lastT=performance.now(), fpsE=0;
+
+function fxBegin(){ fx.filter='none'; fx.globalCompositeOperation='source-over'; fx.clearRect(0,0,W,H); }
+function hexRGB(h){ h=h.replace('#',''); return {r:parseInt(h.slice(0,2),16),g:parseInt(h.slice(2,4),16),b:parseInt(h.slice(4,6),16)}; }
+function mrl(lm){ return lm.map(p=> mirror? {x:1-p.x,y:p.y} : {x:p.x,y:p.y}); }   // mirrored landmarks
+function pt(l,i){ return {x:l[i].x*W, y:l[i].y*H}; }
+function smooth(lm,prev){
+  if(!prev||prev.length!==lm.length) return lm.map(l=>({x:l.x,y:l.y}));
+  return lm.map((l,i)=>({x:prev[i].x*0.5+l.x*0.5, y:prev[i].y*0.5+l.y*0.5}));
+}
+function rr(c,x,y,w,h,r){ c.beginPath(); c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r); c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath(); }
+
+/* ============================================================
+   Effects
+   ============================================================ */
+const effects=[
+{
+ name:'Cyberpunk', icon:'cyber',
+ desc:'Crushed neon grade with cyan / magenta scanlines over a faint city grid.',
+ apply:(oc,img,w,h)=>{
+   fxBegin();
+   fx.filter='contrast(1.6) saturate(2.2) hue-rotate(190deg) brightness(1.2)';
+   fx.drawImage(img,0,0,w,h); fx.filter='none';
+   fx.globalCompositeOperation='overlay';
+   fx.fillStyle='rgba(0,255,255,0.2)'; fx.fillRect(0,0,w,h);
+   fx.fillStyle='rgba(255,0,200,0.15)'; fx.fillRect(0,0,w,h);
+   fx.globalCompositeOperation='source-over';
+   fx.fillStyle='rgba(0,0,0,0.3)';
+   for(let y=0;y<h;y+=4) fx.fillRect(0,y,w,2);
+   fx.strokeStyle='rgba(0,255,255,0.08)'; fx.lineWidth=1;
+   for(let x=0;x<w;x+=50){fx.beginPath();fx.moveTo(x,0);fx.lineTo(x,h);fx.stroke();}
+   for(let y=0;y<h;y+=50){fx.beginPath();fx.moveTo(0,y);fx.lineTo(w,y);fx.stroke();}
+   oc.drawImage(fxC,0,0);
+ }
+},
+{
+ name:'Thermal', icon:'therm',
+ desc:'A real IR sensor: brightness is mapped to an ironbow palette. The hottest point is tracked and labelled.',
+ apply:(oc,img,w,h)=>{
+   const IRW=160, IRH=120;
+   tctx.clearRect(0,0,IRW,IRH);
+   tctx.drawImage(img,0,0,IRW,IRH);
+   const d=tctx.getImageData(0,0,IRW,IRH), p=d.data;
+   let mT=0,mX=0,mY=0;
+   for(let y=0;y<IRH;y++){
+     const row=y*IRW;
+     for(let x=0;x<IRW;x++){
+       const i=(row+x)*4;
+       let t=((p[i]*0.299+p[i+1]*0.587+p[i+2]*0.114)-45)/165;   // contrast stretch
+       t+=(Math.random()-0.5)*0.05;                              // sensor noise
+       t=t<0?0:t>1?1:t;
+       const v=(t*255)|0;
+       p[i]=IR_LUT[v*3]; p[i+1]=IR_LUT[v*3+1]; p[i+2]=IR_LUT[v*3+2];
+       if(t>mT){mT=t;mX=x;mY=y;}
+     }
+   }
+   tctx.putImageData(d,0,0);
+   oc.imageSmoothingEnabled=false;                               // thermal camera low resolution
+   oc.drawImage(thC,0,0,IRW,IRH,0,0,w,h);
+   oc.imageSmoothingEnabled=true;
+   oc.fillStyle='rgba(0,0,0,0.12)';
+   for(let y=0;y<h;y+=3) oc.fillRect(0,y,w,1);
+   // hot-spot marker
+   const hx=mX*w/IRW, hy=mY*h/IRH, s=9;
+   oc.save();
+   oc.strokeStyle='rgba(255,255,255,0.95)'; oc.lineWidth=1.4;
+   oc.beginPath();
+   oc.moveTo(hx-s-5,hy); oc.lineTo(hx-s,hy); oc.moveTo(hx+s,hy); oc.lineTo(hx+s+5,hy);
+   oc.moveTo(hx,hy-s-5); oc.lineTo(hx,hy-s); oc.moveTo(hx,hy+s); oc.lineTo(hx,hy+s+5);
+   oc.stroke();
+   oc.strokeRect(hx-s,hy-s,s*2,s*2);
+   oc.fillStyle='rgba(0,0,0,0.6)'; oc.fillRect(hx+s+6,hy-16,88,15);
+   oc.fillStyle='#fff'; oc.font='bold 10px Tahoma';
+   oc.fillText('PEAK '+(20+mT*19).toFixed(1)+'\u00B0C', hx+s+10, hy-5);
+   oc.restore();
+ }
+},
+{
+ name:'Heat Haze', icon:'haze',
+ desc:'Hot air rises: rays bend harder near the floor while the image warms up.',
+ apply:(oc,img,w,h)=>{
+   fxBegin();
+   fx.filter='saturate(1.35) contrast(1.05)';
+   fx.drawImage(img,0,0,w,h); fx.filter='none';
+   const t=frameCount*0.16, band=3;
+   for(let y=0;y<h;y+=band){
+     const k=y/h;   // 0 = top, 1 = bottom
+     const dx=Math.sin(y*0.05+t*(3.2-2.1*k))*(2+13*k*k)+Math.sin(y*0.013+t*1.7)*4*k;
+     fx.drawImage(img,0,y,w,band, dx,y,w,band);
+   }
+   fx.globalCompositeOperation='overlay';
+   const g=fx.createLinearGradient(0,0,0,h);
+   g.addColorStop(0,'rgba(255,190,90,0.08)');
+   g.addColorStop(1,'rgba(255,80,10,0.32)');
+   fx.fillStyle=g; fx.fillRect(0,0,w,h);
+   fx.globalCompositeOperation='lighter';                       // rising shimmer
+   for(let i=0;i<12;i++){
+     const ph=((frameCount*0.006)+(i*0.173))%1;
+     const x=(Math.abs(Math.sin(i*12.9898))*0.8+0.1)*w;
+     const y=h*(1-ph);
+     const a=0.14*Math.sin(ph*Math.PI);
+     if(a>0){
+       fx.fillStyle='rgba(255,170,60,'+a.toFixed(3)+')';
+       fx.beginPath(); fx.arc(x,y,2+Math.sin(ph*Math.PI)*3,0,6.3); fx.fill();
+     }
+   }
+   fx.globalCompositeOperation='source-over';
+   oc.drawImage(fxC,0,0);
+ }
+},
+{
+ name:'Chromatic', icon:'chroma',
+ desc:'RGB split with occasional glitch slices tearing through the frame.',
+ apply:(oc,img,w,h)=>{
+   fxBegin();
+   fx.globalCompositeOperation='screen';
+   fx.drawImage(img,-6,0,w,h);
+   fx.fillStyle='rgba(0,255,255,0.25)'; fx.fillRect(0,0,w,h);
+   fx.drawImage(img,6,0,w,h);
+   fx.fillStyle='rgba(255,0,80,0.25)'; fx.fillRect(0,0,w,h);
+   fx.globalCompositeOperation='source-over';
+   if(Math.random()>0.92){
+     const sy=Math.random()*(h-30), sh=Math.random()*15+3, off=(Math.random()-0.5)*35;
+     fx.drawImage(img,0,sy,w,sh,off,sy,w,sh);
+   }
+   oc.drawImage(fxC,0,0);
+ }
+},
+{
+ name:'Echo', icon:'echo',
+ desc:'Motion trails that decay slowly — move around to paint with light.',
+ apply:(oc,img,w,h)=>{
+   trctx.globalCompositeOperation='source-over';
+   trctx.drawImage(img,0,0,w,h);
+   trctx.globalCompositeOperation='destination-out';
+   trctx.fillStyle='rgba(0,0,0,0.12)'; trctx.fillRect(0,0,w,h);
+   trctx.globalCompositeOperation='lighter';
+   trctx.filter='blur(3px)';
+   trctx.drawImage(img,0,0,w,h);
+   trctx.filter='none';
+   trctx.globalCompositeOperation='source-over';
+   fxBegin();
+   fx.drawImage(trC,0,0);
+   fx.globalCompositeOperation='lighter';
+   fx.fillStyle='rgba(0,255,200,0.08)'; fx.fillRect(0,0,w,h);
+   fx.globalCompositeOperation='source-over';
+   oc.drawImage(fxC,0,0);
+ }
+},
+{
+ name:'Pixelate', icon:'pixel',
+ desc:'Low-res sensor mode with a visible pixel grid.',
+ apply:(oc,img,w,h)=>{
+   const ps=14;
+   fxBegin();
+   fx.imageSmoothingEnabled=false;
+   fx.drawImage(img,0,0,w/ps,h/ps);
+   fx.imageSmoothingEnabled=true;
+   oc.imageSmoothingEnabled=false;
+   oc.drawImage(fxC,0,0,w/ps,h/ps,0,0,w,h);
+   oc.imageSmoothingEnabled=true;
+   oc.strokeStyle='rgba(0,0,0,0.4)'; oc.lineWidth=1;
+   for(let x=0;x<w;x+=ps){oc.beginPath();oc.moveTo(x,0);oc.lineTo(x,h);oc.stroke();}
+   for(let y=0;y<h;y+=ps){oc.beginPath();oc.moveTo(0,y);oc.lineTo(w,y);oc.stroke();}
+   oc.globalCompositeOperation='screen';
+   oc.fillStyle='rgba(100,200,255,0.12)'; oc.fillRect(0,0,w,h);
+   oc.globalCompositeOperation='source-over';
+ }
+},
+{
+ name:'Neon Edge', icon:'neon',
+ desc:'Edge detector, blurred then re-added as glow — tinted by the palette color.',
+ apply:(oc,img,w,h)=>{
+   const C=hexRGB(frameColor);
+   fxBegin();
+   fx.filter='grayscale(1) contrast(3) brightness(1.2) blur(1px)';
+   fx.drawImage(img,0,0,w,h); fx.filter='none';
+   fx.globalCompositeOperation='difference';
+   fx.drawImage(img,0,0,w,h);
+   fx.globalCompositeOperation='overlay';
+   fx.fillStyle='rgba('+C.r+','+C.g+','+C.b+',0.45)'; fx.fillRect(0,0,w,h);
+   fx.globalCompositeOperation='source-over';
+   oc.filter='blur(6px) brightness(1.5)';
+   oc.drawImage(fxC,0,0);
+   oc.filter='none';
+   oc.globalCompositeOperation='lighter';
+   oc.drawImage(fxC,0,0);
+   oc.globalCompositeOperation='source-over';
+   const g=oc.createRadialGradient(w/2,h/2,h/2.2,w/2,h/2,h);
+   g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(1,'rgba(0,0,0,0.6)');
+   oc.fillStyle=g; oc.fillRect(0,0,w,h);
+ }
+}
+];
+
+/* ============================================================
+   Hand frame rendering
+   ============================================================ */
+function drawFrame(c,pts,img){
+  const C=hexRGB(frameColor);
+  c.save();
+  c.beginPath(); c.moveTo(pts[0].x,pts[0].y);
+  for(let i=1;i<4;i++) c.lineTo(pts[i].x,pts[i].y);
+  c.closePath(); c.clip();
+  effects[currentEffect].apply(c,img,W,H);
+  if(flash>0){ c.fillStyle='rgba(255,255,255,'+flash+')'; c.fillRect(0,0,W,H); flash-=0.12; }
+  c.restore();
+  // glowing border tinted with the palette color
+  c.save();
+  const pulse=12+Math.sin(frameCount*0.2)*8;
+  c.shadowColor=frameColor; c.shadowBlur=pulse;
+  c.strokeStyle='rgba(255,255,255,0.95)'; c.lineWidth=3;
+  c.beginPath(); c.moveTo(pts[0].x,pts[0].y);
+  for(let i=1;i<4;i++) c.lineTo(pts[i].x,pts[i].y);
+  c.closePath(); c.stroke();
+  c.shadowBlur=0;
+  c.strokeStyle='rgba('+C.r+','+C.g+','+C.b+',0.9)'; c.lineWidth=1.2;
+  c.stroke();
+  c.restore();
+}
+
+function hint(txt,sub){
+  ctx.save();
+  ctx.fillStyle='rgba(3,10,28,0.45)'; ctx.fillRect(0,0,W,H);
+  ctx.font='bold 16px Tahoma';
+  const tw=ctx.measureText(txt).width, pw=tw+36, ph=34, px=(W-pw)/2, py=H/2-34;
+  ctx.fillStyle='rgba(10,55,158,0.92)'; rr(ctx,px,py,pw,ph,4); ctx.fill();
+  ctx.strokeStyle='#9cc3f7'; ctx.lineWidth=1; rr(ctx,px+0.5,py+0.5,pw-1,ph-1,4); ctx.stroke();
+  ctx.fillStyle='#fff'; ctx.textBaseline='middle'; ctx.textAlign='center';
+  ctx.fillText(txt,W/2,py+ph/2+1);
+  if(sub){ ctx.font='11px Tahoma'; ctx.fillStyle='rgba(255,255,255,0.75)'; ctx.fillText(sub,W/2,py+ph+22); }
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+  ctx.restore();
+}
+
+function drawIdle(main,sub){ // a little "bliss", like a picture opened in Paint
+  ctx.clearRect(0,0,W,H);
+  const sky=ctx.createLinearGradient(0,0,0,H*0.55);
+  sky.addColorStop(0,'#3983d6'); sky.addColorStop(1,'#b9dcf2');
+  ctx.fillStyle=sky; ctx.fillRect(0,0,W,H*0.55);
+  ctx.fillStyle='#65ac3c';
+  ctx.beginPath(); ctx.moveTo(0,H); ctx.lineTo(0,H*0.52);
+  ctx.quadraticCurveTo(W*0.35,H*0.34,W*0.62,H*0.5);
+  ctx.quadraticCurveTo(W*0.85,H*0.6,W,H*0.54);
+  ctx.lineTo(W,H); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='rgba(0,0,0,0.35)'; ctx.fillRect(0,0,W,H);
+  hint(main,sub);
+}
+
+function setHands(n){
+  if(n===handsState) return; handsState=n;
+  sbHands.textContent = n===2?'2 hands':(n===1?'1 hand':'no hands');
+}
+
+function onResults(res){
+  frameCount++;
+  const now=performance.now(), dt=now-lastT; lastT=now;
+  if(dt>0&&dt<1000) fpsE=fpsE*0.92+(1000/dt)*0.08;
+  if(frameCount%20===0) sbFps.textContent='FPS '+Math.round(fpsE);
+
+  // horizontal flip of the raw frame so overlays render correctly
+  bctx.save();
+  if(mirror){ bctx.translate(W,0); bctx.scale(-1,1); }
+  bctx.drawImage(res.image,0,0,W,H);
+  bctx.restore();
+
+  if(!seenResult){
+    seenResult=true; hideLoading();
+    balloon('Camera ready','Raise both hands to frame the shot — pinch thumb and index together to switch effects.');
+  }
+
+  ctx.clearRect(0,0,W,H);
+  const hands=res.multiHandLandmarks||[];
+
+  if(hands.length!==2){
+    prevHands=[null,null];
+    ctx.filter='brightness(0.35) blur(3px) saturate(0.6)';
+    ctx.drawImage(baseC,0,0,W,H); ctx.filter='none';
+    ctx.fillStyle='rgba(2,8,22,0.45)'; ctx.fillRect(0,0,W,H);
+    if(hands.length===1){
+      const m=mrl(hands[0]);
+      drawConnectors(ctx,m,HAND_CONNECTIONS,{color:'#7c8cae',lineWidth:2});
+      drawLandmarks(ctx,m,{color:'#a9b8d2',lineWidth:1,radius:3});
+      hint('RAISE BOTH HANDS','one hand in view — bring in the second');
+    }else{
+      hint('SHOW BOTH HANDS','frame the scene between your fingertips');
+    }
+    setHands(hands.length);
+    return;
+  }
+
+  let a=hands[0], b=hands[1];
+  if(b[0].x<a[0].x){ const t=a; a=b; b=t; }
+  a=smooth(mrl(a),prevHands[0]); b=smooth(mrl(b),prevHands[1]);
+  prevHands=[a,b];
+
+  // pinch to switch effects
+  const d1=Math.hypot(a[4].x-a[8].x,a[4].y-a[8].y);
+  const d2=Math.hypot(b[4].x-b[8].x,b[4].y-b[8].y);
+  const tnow=Date.now();
+  const pinched=(d1<0.04||d2<0.04);
+  if(pinched&&!isPinched&&(tnow-lastPinchTime>PINCH_CD)){
+    isPinched=true; lastPinchTime=tnow; nextEffect(1);
+  }
+  if(!pinched&&d1>0.07&&d2>0.07) isPinched=false;
+
+  const pts=[pt(a,8),pt(a,4),pt(b,4),pt(b,8)];
+
+  // dark + blurred outside the frame
+  ctx.filter='brightness(0.16) blur(5px) grayscale(0.7)';
+  ctx.drawImage(baseC,0,0,W,H); ctx.filter='none';
+  ctx.fillStyle='rgba(0,4,16,0.5)'; ctx.fillRect(0,0,W,H);
+
+  drawFrame(ctx,pts,baseC);
+
+  if(showSkeletons){
+    const sk={color:frameColor,lineWidth:2};
+    drawConnectors(ctx,a,HAND_CONNECTIONS,sk);
+    drawLandmarks(ctx,a,{color:'#fff',lineWidth:1,radius:3});
+    drawConnectors(ctx,b,HAND_CONNECTIONS,sk);
+    drawLandmarks(ctx,b,{color:'#fff',lineWidth:1,radius:3});
+  }
+  if(isPinched){
+    const cx=(pts[0].x+pts[1].x+pts[2].x+pts[3].x)/4;
+    const cy=(pts[0].y+pts[1].y+pts[2].y+pts[3].y)/4;
+    ctx.beginPath();
+    ctx.arc(cx,cy,22+Math.sin(frameCount*0.5)*6,0,Math.PI*2);
+    ctx.strokeStyle='rgba(255,255,255,0.5)'; ctx.lineWidth=2; ctx.stroke();
+  }
+  setHands(2);
+}
+
+/* ============================================================
+   XP shell — UI elements
+   ============================================================ */
+const paint=$('#paint'), tbar=$('#tbar'), work=$('#work'), holder=$('#holder');
+const sbFx=$('#sbFx'), sbHands=$('#sbHands'), sbFps=$('#sbFps'), sbXY=$('#sbXY'), sbRes=$('#sbRes');
+const tinfo=$('#tinfo'), taskBtn=$('#taskBtn'), startBtn=$('#startBtn'), startMenu=$('#startMenu');
+const trayCamEl=$('#trayCam'), fgSw=$('#fgSw'), cin=$('#cin');
+const sdScreen=$('#shutdown');
+
+/* --- XP yellow tooltip --- */
+const tipEl=$('#tip'); let tipT=null;
+function moveTip(e){
+  if(tipEl.style.display!=='block') return;
+  tipEl.style.left=Math.min(innerWidth-tipEl.offsetWidth-6, e.clientX+14)+'px';
+  tipEl.style.top=Math.max(4,e.clientY-26)+'px';
+}
+function attachTip(el,txt){
+  el.addEventListener('mouseenter',e=>{
+    clearTimeout(tipT);
+    tipT=setTimeout(()=>{ tipEl.textContent=typeof txt==='function'?txt():txt; tipEl.style.display='block'; moveTip(e); },380);
+  });
+  el.addEventListener('mousemove',moveTip);
+  el.addEventListener('mouseleave',()=>{ clearTimeout(tipT); tipEl.style.display='none'; });
+}
+attachTip($('#btnMin'),'Minimize'); attachTip($('#btnMax'),'Maximize');
+attachTip($('#btnClose'),'Close'); attachTip(taskBtn,'Hand Frame FX — running');
+attachTip(startBtn,'Click here to begin'); attachTip($('#clk'),()=>new Date().toDateString());
+attachTip(trayCamEl,()=>'Camera: '+(camActive?'live':'off'));
+attachTip(holder,'Drag to move — use the blue handles to resize');
+attachTip(fgSw,'Current frame color');
+
+/* --- Help balloon tip --- */
+let balT=null;
+function balloon(title,text,ms=6500){
+  const b=$('#balloon');
+  b.innerHTML='<div class="bHead">'+ICON.help+'<b>'+title+'</b><button class="bX">'+ICON.x+'</button></div><div class="bTxt">'+text+'</div>';
+  b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); b.style.display='block';
+  b.querySelector('.bX').onclick=()=>b.style.display='none';
+  clearTimeout(balT); balT=setTimeout(()=>b.style.display='none',ms);
+}
+
+/* --- Effects toolbox --- */
+const toolEls=[];
+effects.forEach((e,i)=>{
+  const el=document.createElement('div'); el.className='tool'; el.innerHTML=ICON[e.icon];
+  attachTip(el,e.name);
+  el.addEventListener('click',()=>selectEffect(i));
+  $('#tools').append(el); toolEls.push(el);
+});
+const nextTool=document.createElement('div');
+nextTool.className='tool'; nextTool.innerHTML=ICON.next;
+attachTip(nextTool,'Next effect (Space)');
+nextTool.addEventListener('click',()=>nextEffect(1));
+ $('#tools').append(nextTool);
+
+/* --- MS Paint color palette --- */
+const PALETTE=['#000000','#808080','#800000','#808000','#008000','#008080','#000080','#800080','#808040','#004040','#0080ff','#004080','#8000ff','#804000',
+               '#ffffff','#c0c0c0','#ff0000','#ffff00','#00ff00','#00ffff','#0000ff','#ff00ff','#ffff80','#00ff80','#80ffff','#8080ff','#ff0080','#ff8040'];
+const swatchEls=[];
+PALETTE.forEach(hex=>{
+  const s=document.createElement('div'); s.className='swb'; s.style.background=hex;
+  attachTip(s,hex.toUpperCase());
+  s.addEventListener('click',()=>setColor(hex));
+  $('#sw').append(s); swatchEls.push(s);
+});
+cin.addEventListener('input',()=>setColor(cin.value));
+function setColor(hex){
+  frameColor=hex; fgSw.style.background=hex;
+  swatchEls.forEach((s,i)=>s.classList.toggle('sel',PALETTE[i]===hex));
+}
+
+/* --- Menus --- */
+let menuOpen=null;
+function closeMenu(){
+  if(!menuOpen) return;
+  menuOpen.pop.remove(); menuOpen.anchor.classList.remove('open'); menuOpen=null;
+}
+function openMenu(anchor,items,key){
+  closeMenu();
+  const pop=document.createElement('div'); pop.className='menu-pop';
+  items.forEach(it=>{
+    if(it.sep){ const s=document.createElement('div'); s.className='msep'; pop.append(s); return; }
+    const mi=document.createElement('div'); mi.className='mi';
+    if(it.check&&it.check()){ const c=document.createElement('span'); c.className='ck'; mi.append(c); }
+    mi.append(document.createTextNode(it.label));
+    mi.addEventListener('click',()=>{ closeMenu(); it.action&&it.action(); });
+    pop.append(mi);
+  });
+  document.body.append(pop);
+  const r=anchor.getBoundingClientRect();
+  let x=r.left, y=r.bottom+1;
+  if(x+pop.offsetWidth>innerWidth-4) x=innerWidth-4-pop.offsetWidth;
+  if(y+pop.offsetHeight>innerHeight-4) y=Math.max(4,r.top-pop.offsetHeight-2);
+  pop.style.left=x+'px'; pop.style.top=y+'px';
+  anchor.classList.add('open');
+  menuOpen={pop,anchor,key};
+}
+const menus={
+ 'File':[
+   {label:'New Session',action:resetSession},
+   {sep:1},
+   {label:'Exit',action:askExit}
+ ],
+ 'Edit':[
+   {label:'Next Effect',action:()=>nextEffect(1)},
+   {label:'Previous Effect',action:()=>nextEffect(-1)},
+   {label:'Random Effect',action:randomEffect},
+   {sep:1},
+   {label:'Reset Frame Color',action:()=>setColor('#00ffff')}
+ ],
+ 'View':[
+   {label:'Hand Skeletons',check:()=>showSkeletons,action:()=>{showSkeletons=!showSkeletons;}},
+   {sep:1},
+   {label:'Actual Size (100%)',action:()=>setSize(W,H)},
+   {label:'Fit in Window',action:fitCanvas}
+ ],
+ 'Image':[
+   {label:'Flip Horizontal',check:()=>!mirror,action:()=>{mirror=!mirror;prevHands=[null,null];}},
+   {sep:1},
+   {label:'Attributes\u2026',action:attrsDialog}
+ ],
+ 'Colors':[
+   {label:'Edit Colors\u2026',action:()=>cin.click()},
+   {label:'Reset Palette Selection',action:()=>setColor('#00ffff')}
+ ],
+ 'Help':[
+   {label:'About Hand Frame FX',action:aboutDialog},
+   {label:'About the Author\u2026',action:authorDialog}
+ ]
+};
+Object.entries(menus).forEach(([k,items])=>{
+  const el=document.createElement('span'); el.className='mb'; el.textContent=k;
+  el.addEventListener('click',()=>{ if(menuOpen&&menuOpen.key===k) closeMenu(); else openMenu(el,items,k); });
+  el.addEventListener('mouseenter',()=>{ if(menuOpen&&menuOpen.key!==k) openMenu(el,items,k); });
+  $('#mbar').append(el);
+});
+
+/* --- XP dialogs --- */
+let dlgZ=200;
+function makeDialog(title,body,buttons,opts={}){
+  const d=document.createElement('div'); d.className='dlg';
+  if(opts.w) d.style.width=opts.w+'px';
+  const bar=document.createElement('div'); bar.className='dBar';
+  bar.innerHTML='<span class="dT">'+title+'</span>';
+  if(opts.closable!==false){
+    const x=document.createElement('button'); x.className='tbtn close dX';
+    x.innerHTML='<svg width="19" height="19" viewBox="0 0 21 21"><path d="M6 6l9 9M15 6l-9 9" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></svg>';
+    x.onclick=()=>d.remove(); bar.append(x);
+    dragify(bar,d);
+  }
+  d.append(bar);
+  const bd=document.createElement('div'); bd.className='dBody'; bd.innerHTML=body; d.append(bd);
+  if(buttons&&buttons.length){
+    const br=document.createElement('div'); br.className='dBtns';
+    buttons.forEach(b=>{
+      const btn=document.createElement('button'); btn.className='xbtn'; btn.textContent=b.label;
+      btn.onclick=()=>{ d.remove(); b.action&&b.action(d); };
+      br.append(btn);
+    });
+    d.append(br);
+  }
+  document.body.append(d);
+  d.style.zIndex=++dlgZ;
+  const pr=paint.getBoundingClientRect(), r=d.getBoundingClientRect();
+  d.style.left=Math.max(8,(pr.width?pr.left+(pr.width-r.width)/2:(innerWidth-r.width)/2))+'px';
+  d.style.top =Math.max(8,(pr.height?pr.top+(pr.height-r.height)/2-10:(innerHeight-r.height)/2))+'px';
+  return d;
+}
+const GH='https://github.com/AmiraliFirouzi';
+const LI='https://www.linkedin.com/in/amirali-firouzi-2b714335a';
+function aboutDialog(){
+  makeDialog('About Hand Frame FX',
+   '<div class="icn">'+ICON.app32+'</div><div>'+
+   '<b style="font-size:12px">Hand Frame FX \u2014 Windows XP Edition</b><br>Version 5.1 (build 2600\u00B7fx)<br><br>'+
+   'Created by <b>AmiraliFirouzi</b><br>'+
+   '<a class="dLink" href="'+GH+'" target="_blank" rel="noopener noreferrer">GitHub \u00B7 github.com/AmiraliFirouzi</a><br>'+
+   '<a class="dLink" href="'+LI+'" target="_blank" rel="noopener noreferrer">LinkedIn \u00B7 amirali-firouzi</a><br><br>'+
+   'Hand tracking: MediaPipe Hands, fully on-device<br>'+
+   'Pinch thumb + index to switch effects.</div>',
+   [{label:'OK'}],{w:380});
+}
+function authorDialog(){
+  makeDialog('About the Author',
+   '<div class="icn">'+ICON.author+'</div><div>'+
+   '<b style="font-size:12px">AmiraliFirouzi</b><br>Creator of Hand Frame FX<br><br>'+
+   '<a class="dLink" href="'+GH+'" target="_blank" rel="noopener noreferrer">github.com/AmiraliFirouzi</a><br>'+
+   '<a class="dLink" href="'+LI+'" target="_blank" rel="noopener noreferrer">linkedin.com/in/amirali-firouzi</a></div>',
+   [{label:'OK'}],{w:340});
+}
+function attrsDialog(){
+  makeDialog('Attributes',
+   '<div><div class="aRow"><label>Width:</label><input id="aw" type="number" min="160" max="2000" value="'+holder.offsetWidth+'"></div>'+
+   '<div class="aRow"><label>Height:</label><input id="ah" type="number" min="120" max="2000" value="'+holder.offsetHeight+'"></div>'+
+   '<div class="aNote">Display size of the video window \u2014 the internal render always stays 640 \u00D7 480.</div></div>',
+   [{label:'OK',action:d=>{
+       setSize(clamp(+d.querySelector('#aw').value||640,160,2000),
+               clamp(+d.querySelector('#ah').value||480,120,2000));
+     }},{label:'Cancel'}],{w:290});
+}
+function askExit(){
+  makeDialog('Hand Frame FX',
+   icon32('question')+'<div>Are you sure you want to close Hand Frame FX?<br>The camera will be released.</div>',
+   [{label:'Yes',action:shutdownApp},{label:'No'}]);
+}
+function binDialog(){
+  makeDialog('Recycle Bin',
+   icon32('info')+'<div>The Recycle Bin is empty.<br>Effects are reusable \u2014 nothing ever gets thrown away.</div>',
+   [{label:'OK'}]);
+}
+let loadingDlg=null;
+function showLoading(){
+  hideLoading();
+  loadingDlg=makeDialog('Hand Frame FX',
+   '<div class="ldg"><div>'+ICON.app32+'</div>'+
+   '<div>Connecting to camera and loading the hand-tracking model\u2026</div>'+
+   '<div class="xpbar"><div class="xpfill"></div></div></div>',
+   null,{closable:false,w:330});
+}
+function hideLoading(){ if(loadingDlg){loadingDlg.remove();loadingDlg=null;} }
+function camError(err){
+  trayUpdate();
+  makeDialog('Camera Error',
+   icon32('error')+'<div>Couldn\u2019t start the camera:<br><b>'+escapeHtml(err.message||err.name||'unknown error')+'</b><br><br>'+
+   'Make sure the page runs on HTTPS or localhost, the browser allowed camera access, and no other app is using the webcam.</div>',
+   [{label:'Retry',action:()=>startCamera()},{label:'Cancel'}]);
+  drawIdle('CAMERA ERROR','use Retry in the dialog, or reload the page');
+}
+
+/* --- "Turn off computer" dialog (classic XP) --- */
+function turnOffDialog(){
+  closeStart(); closeMenu();
+  const d=document.createElement('div'); d.className='dlg sdDlg';
+  d.innerHTML=
+    '<div class="dBar"><span class="dT">Turn off computer</span></div>'+
+    '<div class="sdBody">'+
+      '<button class="sdBtn" data-a="standby">'+ICON.standby+'<span>Stand By</span></button>'+
+      '<button class="sdBtn" data-a="off">'+ICON.poweroff+'<span>Turn Off</span></button>'+
+      '<button class="sdBtn" data-a="restart">'+ICON.restart+'<span>Restart</span></button>'+
+    '</div>'+
+    '<div class="sdFoot"><button class="sdCancel">Cancel</button></div>';
+  document.body.append(d);
+  d.style.zIndex=++dlgZ;
+  let cx=innerWidth/2, cy=(innerHeight-32)/2;
+  if(paint.style.display!=='none'){
+    const pr=paint.getBoundingClientRect();
+    cx=pr.left+pr.width/2; cy=pr.top+pr.height/2;
+  }
+  const r=d.getBoundingClientRect();
+  d.style.left=Math.max(8,cx-r.width/2)+'px';
+  d.style.top=Math.max(8,cy-r.height/2)+'px';
+  d.querySelector('.sdCancel').onclick=()=>d.remove();
+  d.querySelectorAll('.sdBtn').forEach(b=>b.onclick=()=>{
+    const a=b.dataset.a; d.remove();
+    if(a==='standby') doStandBy();
+    else if(a==='restart') doRestart();
+    else doTurnOff();
+  });
+}
+
+/* --- Power screens: shut down / stand by / restart --- */
+function powerScreen(mode){
+  sdScreen.dataset.mode=mode;
+  if(mode==='boot'){
+    sdScreen.innerHTML='<div class="boot">'+ICON.app32+
+      '<div class="bt">Hand Frame FX</div><div class="bs">Windows XP Edition</div>'+
+      '<div class="xpbar bootbar"><div class="xpfill"></div></div></div>';
+  }else if(mode==='safe'){
+    sdScreen.innerHTML='<div class="safe">It\u2019s now safe to turn off<br>your computer.</div>'+
+      '<div class="hint">Click anywhere to turn it back on</div>';
+  }else{
+    sdScreen.innerHTML='<div class="sbTxt">Stand By \u2014 click anywhere to resume</div>';
+  }
+  sdScreen.classList.add('show');
+}
+function wakeScreen(){
+  if(sdScreen.dataset.mode==='boot') return;
+  hideLoading();
+  sdScreen.classList.remove('show');
+  sdScreen.innerHTML=''; sdScreen.dataset.mode='';
+  if(paint.style.display==='none') restoreApp();
+  else if(!camActive) startCamera();
+}
+function doTurnOff(){
+  stopCamera();
+  powerScreen('safe');
+  // Browsers only let a tab close itself when it was opened by script;
+  // if closing is blocked, the classic "safe to turn off" screen remains.
+  setTimeout(()=>{ try{ window.close(); }catch(e){} },1200);
+}
+function doStandBy(){ stopCamera(); powerScreen('standby'); }
+function doRestart(){ stopCamera(); powerScreen('boot'); setTimeout(()=>location.reload(),2600); }
+sdScreen.addEventListener('click',wakeScreen);
+
+/* --- Dragging elements (window / dialog) --- */
+let maximized=false, prevRect=null;
+function dragify(handle,target){
+  handle.addEventListener('pointerdown',e=>{
+    if(e.button!==0) return;
+    if(e.target.closest('button')) return;
+    if(target===paint&&maximized) return;
+    e.preventDefault();
+    handle.setPointerCapture(e.pointerId);
+    const sx=e.clientX, sy=e.clientY;
+    const ol=parseFloat(target.style.left), ot=parseFloat(target.style.top);
+    const mv=ev=>{
+      target.style.left=(ol+ev.clientX-sx)+'px';
+      target.style.top =(ot+ev.clientY-sy)+'px';
+    };
+    const up=()=>{ handle.removeEventListener('pointermove',mv); handle.removeEventListener('pointerup',up); };
+    handle.addEventListener('pointermove',mv);
+    handle.addEventListener('pointerup',up);
+  });
+}
+dragify(tbar,paint);
+
+/* --- Window management --- */
+function centerWindow(){
+  const vw=innerWidth, vh=innerHeight-32;
+  const w=Math.min(880,vw-12), h=Math.min(668,vh-6);
+  Object.assign(paint.style,{width:w+'px',height:h+'px',
+    left:Math.max(4,(vw-w)/2)+'px',top:Math.max(4,(vh-h)/2)+'px'});
+}
+function minimizeWin(){
+  paint.classList.add('mini'); taskBtn.classList.remove('on');
+  setTimeout(()=>{ paint.style.display='none'; paint.classList.remove('mini'); },175);
+}
+function restoreApp(){
+  paint.style.display='flex'; taskBtn.classList.add('on');
+  if(!camActive&&!camStarting) startCamera();
+}
+function toggleMax(){
+  if(maximized){ Object.assign(paint.style,prevRect); maximized=false; }
+  else{
+    prevRect={left:paint.style.left,top:paint.style.top,width:paint.style.width,height:paint.style.height};
+    Object.assign(paint.style,{left:'2px',top:'2px',width:(innerWidth-8)+'px',height:(innerHeight-38)+'px'});
+    maximized=true;
+  }
+  if(!userSized) fitCanvas(); else clampHolder();
+}
+ $('#btnMin').onclick=minimizeWin;
+ $('#btnMax').onclick=toggleMax;
+ $('#btnClose').onclick=askExit;
+tbar.addEventListener('dblclick',e=>{ if(!e.target.closest('button')) toggleMax(); });
+taskBtn.onclick=()=>{ paint.style.display==='none'?restoreApp():minimizeWin(); };
+
+/* --- Canvas: move & resize with blue handles --- */
+let userSized=false;
+holder.addEventListener('pointerdown',e=>{
+  if(e.button!==0) return;
+  e.preventDefault();
+  holder.setPointerCapture(e.pointerId);
+  const sx=e.clientX, sy=e.clientY;
+  const st={w:holder.offsetWidth,h:holder.offsetHeight,l:holder.offsetLeft,t:holder.offsetTop};
+  let mode='move';
+  if(e.target.classList.contains('hnd'))
+    mode=e.target.classList.contains('r')?'r':(e.target.classList.contains('b')?'b':'br');
+  const mv=ev=>{
+    const dx=ev.clientX-sx, dy=ev.clientY-sy;
+    const waW=work.clientWidth, waH=work.clientHeight;
+    if(mode==='move'){
+      holder.style.left=clamp(st.l+dx,0,Math.max(0,waW-st.w-2))+'px';
+      holder.style.top =clamp(st.t+dy,0,Math.max(0,waH-st.h-2))+'px';
+    }else{
+      if(mode!=='b') holder.style.width =Math.max(180,Math.min(waW-st.l-2,st.w+dx))+'px';
+      if(mode!=='r') holder.style.height=Math.max(135,Math.min(waH-st.t-2,st.h+dy))+'px';
+      userSized=true;
+    }
+  };
+  const up=()=>{ holder.removeEventListener('pointermove',mv); holder.removeEventListener('pointerup',up); updateRes(); };
+  holder.addEventListener('pointermove',mv);
+  holder.addEventListener('pointerup',up);
+});
+canvas.addEventListener('mousemove',e=>{
+  const r=canvas.getBoundingClientRect();
+  sbXY.textContent=Math.round((e.clientX-r.left)/r.width*W)+', '+Math.round((e.clientY-r.top)/r.height*H);
+});
+canvas.addEventListener('mouseleave',()=>sbXY.textContent='');
+function fitCanvas(){
+  userSized=false;
+  const s=Math.min((work.clientWidth-16)/W,(work.clientHeight-58)/H,1.25);
+  holder.style.width=(W*s)+'px'; holder.style.height=(H*s)+'px';
+  holder.style.left='8px'; holder.style.top='8px';
+  updateRes();
+}
+function clampHolder(){
+  const waW=work.clientWidth, waH=work.clientHeight;
+  const w=Math.min(holder.offsetWidth,waW-4), h=Math.min(holder.offsetHeight,waH-4);
+  holder.style.width=w+'px'; holder.style.height=h+'px';
+  holder.style.left=Math.min(holder.offsetLeft,waW-w-2)+'px';
+  holder.style.top =Math.min(holder.offsetTop, waH-h-2)+'px';
+  updateRes();
+}
+function setSize(w,h){ userSized=true; holder.style.width=w+'px'; holder.style.height=h+'px'; clampHolder(); }
+function updateRes(){ sbRes.textContent=holder.offsetWidth+' \u00D7 '+holder.offsetHeight; }
+
+/* --- Start menu --- */
+function openStart(){ closeMenu(); startMenu.classList.add('open'); startBtn.classList.add('down'); }
+function closeStart(){ startMenu.classList.remove('open'); startBtn.classList.remove('down'); }
+startBtn.addEventListener('click',()=>{ startMenu.classList.contains('open')?closeStart():openStart(); });
+
+const go=f=>()=>{ closeStart(); f(); };
+[['app16','Hand Frame FX',go(restoreApp)],
+ ['next','Next Effect',go(()=>nextEffect(1))],
+ ['dice','Random Effect',go(randomEffect)],
+ null,
+ ['help','Help and Support',go(aboutDialog)]
+].forEach(row=>{
+  if(!row){ const s=document.createElement('div'); s.className='smSep'; $('#smL').append(s); return; }
+  const it=document.createElement('div'); it.className='smItem';
+  it.innerHTML=ICON[row[0]]+'<span>'+row[1]+'</span>';
+  it.addEventListener('click',row[2]);
+  $('#smL').append(it);
+});
+const smFxEls=[];
+effects.forEach((e,i)=>{
+  const it=document.createElement('div'); it.className='smItem';
+  it.innerHTML=ICON[e.icon]+'<span>'+e.name+'</span>';
+  it.addEventListener('click',()=>{ closeStart(); selectEffect(i); });
+  $('#smFx').append(it); smFxEls.push(it);
+});
+ $('#smLogOff').onclick=()=>{ closeStart(); makeDialog('Log Off Hand Frame FX?',
+  icon32('question')+'<div>Log off and reset the session?<br>Effect and frame color return to defaults.</div>',
+  [{label:'Yes',action:()=>{resetSession();balloon('Logged off','A fresh session is waiting for you.');}},{label:'No'}]); };
+ $('#smOff').onclick=()=>{ closeStart(); turnOffDialog(); };
+
+/* --- Desktop icons --- */
+document.querySelectorAll('.dicon').forEach(ic=>{
+  ic.addEventListener('mousedown',()=>{
+    document.querySelectorAll('.dicon').forEach(d=>d.classList.remove('sel'));
+    ic.classList.add('sel');
+  });
+  ic.addEventListener('dblclick',()=>{ ic.id==='icApp'?restoreApp():binDialog(); });
+});
+
+/* --- Click outside: close menus, clear selection --- */
+document.addEventListener('mousedown',e=>{
+  if(menuOpen&&!e.target.closest('.menu-pop')&&!e.target.closest('.mb')) closeMenu();
+  if(startMenu.classList.contains('open')&&!e.target.closest('#startMenu')&&!e.target.closest('#startBtn')) closeStart();
+  if(!e.target.closest('.dicon')) document.querySelectorAll('.dicon.sel').forEach(d=>d.classList.remove('sel'));
+});
+
+/* --- Clock --- */
+const clk=$('#clk');
+function tick(){ clk.textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); }
+tick(); setInterval(tick,10000);
+
+/* --- Keyboard shortcuts --- */
+addEventListener('keydown',e=>{
+  if(sdScreen.classList.contains('show')){         // any key wakes stand-by / safe screens
+    wakeScreen(); return;
+  }
+  if(/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) return;
+  if(e.code==='Space'||e.code==='ArrowRight'){ e.preventDefault(); nextEffect(1); }
+  else if(e.code==='ArrowLeft'){ e.preventDefault(); nextEffect(-1); }
+  else if(e.key==='Escape'){ closeMenu(); closeStart(); }
+});
+
+/* --- React to browser resize --- */
+addEventListener('resize',()=>{
+  if(maximized){
+    Object.assign(paint.style,{width:(innerWidth-8)+'px',height:(innerHeight-38)+'px'});
+  }else{
+    const r=paint.getBoundingClientRect();
+    paint.style.width=Math.min(r.width,innerWidth-8)+'px';
+    paint.style.height=Math.min(r.height,innerHeight-40)+'px';
+    paint.style.left=Math.min(r.left,Math.max(4,innerWidth-r.width-4))+'px';
+    paint.style.top =Math.min(r.top,Math.max(4,innerHeight-32-r.height-4))+'px';
+  }
+  if(!userSized) fitCanvas(); else clampHolder();
+});
+
+/* ============================================================
+   Camera
+   ============================================================ */
+function trayUpdate(){ trayCamEl.innerHTML=camSVG(camActive); }
+async function startCamera(){
+  if(camActive||camStarting) return;
+  camStarting=true; showLoading();
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:W},height:{ideal:H},facingMode:'user'},audio:false});
+    video.srcObject=stream;
+    await video.play();
+    camActive=true; camStarting=false; trayUpdate();
+    requestAnimationFrame(pump);
+  }catch(err){
+    camStarting=false; camActive=false;
+    hideLoading(); trayUpdate(); camError(err);
+  }
+}
+async function pump(){
+  if(!camActive) return;
+  if(!sending&&video.readyState>=2){
+    sending=true;
+    try{ await hands.send({image:video}); }catch(e){}
+    sending=false;
+  }
+  requestAnimationFrame(pump);
+}
+function stopCamera(){
+  camActive=false; camStarting=false; seenResult=false;
+  hideLoading();
+  if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
+  video.srcObject=null; trayUpdate();
+  drawIdle('CAMERA OFF','double-click the desktop icon to restart');
+}
+function shutdownApp(){
+  closeStart(); stopCamera();
+  paint.style.display='none'; taskBtn.classList.remove('on');
+  balloon('Hand Frame FX closed','Double-click its desktop icon whenever you want it back.');
+}
+
+/* --- Session & effect selection --- */
+function resetSession(){
+  trctx.clearRect(0,0,W,H);
+  prevHands=[null,null]; flash=0;
+  selectEffect(0,true); setColor('#00ffff');
+}
+function randomEffect(){
+  let r; do{ r=Math.floor(Math.random()*effects.length); }while(r===currentEffect&&effects.length>1);
+  selectEffect(r);
+}
+function selectEffect(i,silent){
+  currentEffect=((i%effects.length)+effects.length)%effects.length;
+  if(!silent) flash=1;
+  uiEffect();
+}
+function nextEffect(dir){ selectEffect(currentEffect+dir); }
+function uiEffect(){
+  const e=effects[currentEffect];
+  sbFx.textContent='FX '+(currentEffect+1)+'/'+effects.length+' \u2014 '+e.name;
+  tinfo.innerHTML='<b>'+e.name+'</b><br>'+e.desc;
+  toolEls.forEach((el,i)=>el.classList.toggle('on',i===currentEffect));
+  smFxEls.forEach((el,i)=>el.classList.toggle('cur',i===currentEffect));
+}
+
+/* ============================================================
+   Bootstrap
+   ============================================================ */
+const hands=new Hands({locateFile:f=>'https://cdn.jsdelivr.net/npm/@mediapipe/hands/'+f});
+hands.setOptions({maxNumHands:2,modelComplexity:1,minDetectionConfidence:0.5,minTrackingConfidence:0.5});
+hands.onResults(onResults);
+
+centerWindow();
+fitCanvas();
+uiEffect();
+setColor('#00ffff');
+trayUpdate();
+drawIdle('WAITING FOR CAMERA','the view will appear here');
+startCamera();
+</script>
+</body>
+</html>
